@@ -26,7 +26,7 @@
 
 // These are arbitrarily chosen, but with care not to overlap
 // processor defined exceptions or interrupt vectors.
-#define T_SYSCALL   48		// system call
+#define T_SYSCALL   48		// system call  @yuhangj 48 = $0x30
 #define T_DEFAULT   500		// catchall
 
 #define IRQ_OFFSET	32	// IRQ 0 corresponds to int IRQ_OFFSET
@@ -55,8 +55,12 @@ struct PushRegs {
 	uint32_t reg_eax;
 } __attribute__((packed));
 
+/* @yuhangj
+ * regs - err pushed after _alltraps
+ * eip - ss pushed after env_pop_tf()
+ */
 struct Trapframe {
-	struct PushRegs tf_regs;
+	struct PushRegs tf_regs;                    
 	uint16_t tf_es;
 	uint16_t tf_padding1;
 	uint16_t tf_ds;
@@ -64,6 +68,7 @@ struct Trapframe {
 	uint32_t tf_trapno;
 	/* below here defined by x86 hardware */
 	uint32_t tf_err;
+
 	uintptr_t tf_eip;
 	uint16_t tf_cs;
 	uint16_t tf_padding3;
@@ -85,6 +90,43 @@ struct UTrapframe {
 	/* the trap-time stack to return to */
 	uintptr_t utf_esp;
 } __attribute__((packed));
+
+void trap0(void);
+void trap1(void);
+void trap2(void);
+void trap3(void);
+void trap4(void);
+void trap5(void);
+void trap6(void);
+void trap7(void);
+void trap8(void);
+void trap9(void);
+void trap10(void);
+void trap11(void);
+void trap12(void);
+void trap13(void);
+void trap14(void);
+void trap15(void);
+void trap16(void);
+void trap17(void);
+void trap18(void);
+void trap19(void);
+void trap20(void);
+void trap21(void);
+void trap22(void);
+void trap23(void);
+void trap24(void);
+void trap25(void);
+void trap26(void);
+void trap27(void);
+void trap28(void);
+void trap29(void);
+void trap30(void);
+void trap31(void);
+
+void trap_sysc(void);
+
+void sysenter_handler(void);
 
 #endif /* !__ASSEMBLER__ */
 

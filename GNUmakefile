@@ -63,6 +63,10 @@ endif
 
 # try to generate a unique GDB port
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
+# QEMU's gdb stub command line changed in 0.11
+QEMUGDB = $(shell if $(QEMU) -nographic -help | grep -q '^-gdb'; \
+	then echo "-gdb tcp::$(GDBPORT)"; \
+	else echo "-s -p $(GDBPORT)"; fi)
 
 CC	:= $(GCCPREFIX)gcc -pipe
 AS	:= $(GCCPREFIX)as
@@ -135,13 +139,14 @@ QEMUOPTS += -smp $(CPUS)
 QEMUOPTS += $(QEMUEXTRA)
 
 
+
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu: $(IMAGES) .gdbinit
+qemu: $(IMAGES)
 	$(QEMU) $(QEMUOPTS)
 
-qemu-nox: $(IMAGES) .gdbinit
+qemu-nox: $(IMAGES)
 	@echo "***"
 	@echo "*** Use Ctrl-a x to exit qemu"
 	@echo "***"
@@ -151,13 +156,13 @@ qemu-gdb: $(IMAGES) .gdbinit
 	@echo "***"
 	@echo "*** Now run 'gdb'." 1>&2
 	@echo "***"
-	$(QEMU) $(QEMUOPTS) -S
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 qemu-nox-gdb: $(IMAGES) .gdbinit
 	@echo "***"
 	@echo "*** Now run 'gdb'." 1>&2
 	@echo "***"
-	$(QEMU) -nographic $(QEMUOPTS) -S
+	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
 print-qemu:
 	@echo $(QEMU)
@@ -167,7 +172,7 @@ print-gdbport:
 
 # For deleting the build
 clean:
-	rm -rf $(OBJDIR) .gdbinit jos.in qemu.log
+	rm -rf $(OBJDIR) .gdbinit jos.in
 
 realclean: clean
 	rm -rf lab$(LAB).tar.gz jos.out
@@ -217,17 +222,17 @@ prep-%:
 
 run-%-nox-gdb: .gdbinit
 	$(V)$(MAKE) --no-print-directory prep-$*
-	$(QEMU) -nographic $(QEMUOPTS) -S
+	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
 run-%-gdb: .gdbinit
 	$(V)$(MAKE) --no-print-directory prep-$*
-	$(QEMU) $(QEMUOPTS) -S
+	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
-run-%-nox: .gdbinit
+run-%-nox:
 	$(V)$(MAKE) --no-print-directory prep-$*
 	$(QEMU) -nographic $(QEMUOPTS)
 
-run-%: .gdbinit
+run-%:
 	$(V)$(MAKE) --no-print-directory prep-$*
 	$(QEMU) $(QEMUOPTS)
 

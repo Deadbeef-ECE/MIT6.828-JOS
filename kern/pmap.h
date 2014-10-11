@@ -69,6 +69,9 @@ void	user_mem_assert(struct Env *env, const void *va, size_t len, int perm);
 static inline physaddr_t
 page2pa(struct Page *pp)
 {
+	//cprintf("\npage addr:[%p]; pages head_addr:[%p]; transfered PA:[]\n", 
+	//	 pp, pages);
+	
 	return (pp - pages) << PGSHIFT;
 }
 
@@ -83,6 +86,7 @@ pa2page(physaddr_t pa)
 static inline void*
 page2kva(struct Page *pp)
 {
+	//cprintf("!!!!!!!!!!!!!!!!!transfered Kva [%p] from page addr[%p]\n", KADDR(page2pa(pp)), pp);
 	return KADDR(page2pa(pp));
 }
 

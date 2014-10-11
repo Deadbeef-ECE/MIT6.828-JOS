@@ -135,6 +135,7 @@ memset(void *v, int c, size_t n)
 		asm volatile("cld; rep stosb\n"
 			:: "D" (v), "a" (c), "c" (n)
 			: "cc", "memory");
+
 	return v;
 }
 

@@ -3,10 +3,63 @@
 #include <inc/syscall.h>
 #include <inc/lib.h>
 
+/* @yuhangj
+ * add new function from inc/x86.h
+ */
+#include <inc/x86.h>
+
+
+static int32_t
+fast_syscall(int num, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4){
+	uint32_t ret;
+	// @yuhangj
+	// the implemetation of sysenter.
+	// It first saves ebp, then moves all arguments into registers.
+	// It then load the return address into esi and the original stack into esp
+	// It then calls sysenter and begins running in sysenter_handler in 
+	// kern/trapentry.S
+	// When it returns it recovers its ebp value and moves the return value in
+	// eax into the ret variable, which it returns.
+	asm volatile("pushl %%ebp;"
+					"movl %1, %%eax;"
+					"movl %2, %%edx;"
+					"movl %3, %%ecx;"
+					"movl %4, %%ebx;"
+					"movl %5, %%edi;"
+					"leal ctn_syse, %%esi;"
+					"movl %%esp, %%ebp;"
+						"sysenter;"
+						"ctn_syse: "
+						"popl %%ebp;"
+						"movl %%eax, %0"
+						: "=m"(ret)
+						: "m"(num), "m"(a1), "m"(a2), "m"(a3), "m"(a4));
+	return ret;
+}
+
 static inline int32_t
 syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
 {
 	int32_t ret;
+
+	/* @yuhangj
+	 * relative asm function defined in inc/x86.h
+	 * Check if we can use sysenter/sysexit instruction 
+	 * If not list, execute regular trap handler.
+	 */
+	if(get_cpu_features() & CPUID_FLAG_SEP){
+		switch(num)
+		{
+			case SYS_cputs:
+			case SYS_cgetc:
+			case SYS_getenvid:
+				//return fast_syscall(num, a1, a2, a3, a4);
+			case SYS_env_destroy:
+			case SYS_yield:
+			default:
+				break;
+		}
+	}
 
 	// Generic system call: pass system call number in AX,
 	// up to five parameters in DX, CX, BX, DI, SI.

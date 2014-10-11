@@ -2,7 +2,7 @@
 #define JOS_INC_ELF_H
 
 #define ELF_MAGIC 0x464C457FU	/* "\x7FELF" in little endian */
-
+/* ELF header */
 struct Elf {
 	uint32_t e_magic;	// must equal ELF_MAGIC
 	uint8_t e_elf[12];

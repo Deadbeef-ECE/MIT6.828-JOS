@@ -20,7 +20,7 @@ unsigned char percpu_kstacks[NCPU][KSTKSIZE]
 __attribute__ ((aligned(PGSIZE)));
 
 
-// See MultiProcessor Specification Version 1.[14]
+// See MultiProcessor(mp) Specification Version 1.[14]
 
 struct mp {             // floating pointer [MP 4.1]
 	uint8_t signature[4];           // "_MP_"

@@ -293,4 +293,40 @@ xchg(volatile uint32_t *addr, uint32_t newval)
 	return result;
 }
 
+/* @yuhangj
+ * CPUID instruction */
+
+/*f ast syscall*/
+#define CPUID_FLAG_SEP 0x800
+/* Page size extension */
+#define CPUID_FLAG_PSE 0x8
+static inline uint32_t
+
+get_cpu_features(void)
+{
+	uint32_t feature;
+	__asm __volatile(" movl $1, %%eax\n\t"
+		"cpuid\n\t"
+		"movl %%edx, %0"
+		: "=r"(feature)
+		:
+		:"%eax", "%ebx", "%ecx", "%edx");
+	return feature;
+}
+// Copied from k6mod.c linked to in instructions
+/* If your binutils don't accept this: upgrade! */
+#define rdmsr(msr,val1,val2) \
+		__asm__ __volatile__("rdmsr" \
+					: "=a" (val1), "=d" (val2) \
+					: "c" (msr))
+
+#define wrmsr(msr,val1,val2) \
+		__asm__ __volatile__("wrmsr" \
+					: /* no outputs */ \
+					: "c" (msr), "a" (val1), "d" (val2))
+
+#define SYSENTER_CS  0x174
+#define SYSENTER_ESP 0x175
+#define SYSENTER_EIP 0x176
+
 #endif /* !JOS_INC_X86_H */

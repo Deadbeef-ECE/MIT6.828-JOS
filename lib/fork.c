@@ -25,6 +25,10 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	pde_t pde = vpt[PGNUM(addr)];
+
+	if(!((err & FEC_WR) && (pde &PTE_COW) ))
+		panic("Unrecoverable page fault at address[0x%x]!\n", addr);
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -34,8 +38,12 @@ pgfault(struct UTrapframe *utf)
 	//   No need to explicitly delete the old page's mapping.
 
 	// LAB 4: Your code here.
-
-	panic("pgfault not implemented");
+	envid_t thisenv_id = sys_getenvid();
+	sys_page_alloc(thisenv_id, PFTEMP, PTE_P|PTE_W|PTE_U);
+	memmove((void*)PFTEMP, (void*)ROUNDDOWN(addr, PGSIZE), PGSIZE);
+	sys_page_map(thisenv_id, (void*)PFTEMP, thisenv_id,(void*)ROUNDDOWN(addr, PGSIZE), 
+		PTE_U|PTE_W|PTE_P);
+	//panic("pgfault not implemented");
 }
 
 //
@@ -53,9 +61,22 @@ static int
 duppage(envid_t envid, unsigned pn)
 {
 	int r;
-
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	int map_sz = pn*PGSIZE;
+	envid_t thisenv_id = sys_getenvid();
+	int perm = vpt[pn]&PTE_SYSCALL;
+
+	if(perm & PTE_COW || perm & PTE_W){
+		perm |= PTE_COW;
+		perm &= ~PTE_W;
+	}
+	//cprintf("thisenv_id[%p]\n", thisenv_id);
+
+	if((r = sys_page_map(thisenv_id, (void*)map_sz, envid, (void*)map_sz, perm)) < 0)
+		return r;
+	if((r = sys_page_map(thisenv_id, (void*)map_sz, thisenv_id, (void*)map_sz, perm)) < 0)
+		return r;
+	//panic("duppage not implemented");
 	return 0;
 }
 
@@ -79,7 +100,31 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+	envid_t child_id;
+	uint32_t pg_cow_ptr;
+	int r;
+
+	set_pgfault_handler(pgfault);
+
+	if((child_id = sys_exofork()) < 0)
+		panic("Fork error\n");
+	if(child_id == 0){
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+	for(pg_cow_ptr = UTEXT; pg_cow_ptr < UXSTACKTOP - PGSIZE; pg_cow_ptr += PGSIZE){
+		if ((vpd[PDX(pg_cow_ptr)]&PTE_P) && (vpt[PGNUM(pg_cow_ptr)]&(PTE_P|PTE_U)))
+			duppage(child_id, PGNUM(pg_cow_ptr));
+	}
+	if((r = sys_page_alloc(child_id, (void *)(UXSTACKTOP - PGSIZE), PTE_U|PTE_P|PTE_W)))
+		panic("Alloc exception stack error: %e\n", r);
+
+	extern void _pgfault_upcall(void);
+	sys_env_set_pgfault_upcall(child_id, _pgfault_upcall);
+
+	sys_env_set_status(child_id, ENV_RUNNABLE);
+	return child_id;
+	//panic("fork not implemented");
 }
 
 // Challenge!
